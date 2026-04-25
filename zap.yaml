@@ -1,40 +1,83 @@
 env:
   contexts:
-  - excludePaths: []
-    name: baseline
+  - name: todo-api
     urls:
     - http://localhost:5132
+    includePaths:
+    - http://localhost:5132/.*
+    excludePaths: []
+    authentication:
+      method: json
+      parameters:
+        loginPageUrl: http://localhost:5132/login
+        loginRequestBody: '{"username":"admin","password":"admin"}'
+      verification:
+        method: response
+        loggedInRegex: "Login successful"
+        loggedOutRegex: "Unauthorized"
+    sessionManagement:
+      method: cookie
+      parameters: {}
+    users:
+    - name: admin
+      credentials:
+        username: admin
+        password: admin
   parameters:
     failOnError: true
-    progressToStdout: false
+    progressToStdout: true
+
 jobs:
-- parameters:
+- type: passiveScan-config
+  parameters:
     enableTags: false
     maxAlertsPerRule: 10
-  type: passiveScan-config
-- parameters:
+
+- type: openapi
+  parameters:
+    apiUrl: http://localhost:5132/openapi/v1.json
+    targetUrl: http://localhost:5132
+
+- type: spider
+  parameters:
+    context: todo-api
+    url: http://localhost:5132/todos
+    maxDuration: 2
+
+- type: spiderAjax
+  parameters:
+    context: todo-api
+    url: http://localhost:5132/todos
     maxDuration: 1
-    url: http://localhost:5132
-  type: spider
-- parameters:
+
+- type: passiveScan-wait
+  parameters:
     maxDuration: 0
-  type: passiveScan-wait
-- parameters:
+
+- type: activeScan
+  parameters:
+    context: todo-api
+    maxRuleDurationInMins: 0
+    maxScanDurationInMins: 5
+
+- type: outputSummary
+  parameters:
     format: Long
     summaryFile: /home/zap/zap_out.json
   rules: []
-  type: outputSummary
-- parameters:
-    reportDescription: ''
+
+- type: report
+  parameters:
+    reportTitle: ZAP Full Scan Report
+    reportDescription: Active scan with OpenAPI coverage and authentication
     reportDir: /zap/wrk/
-    reportFile: zap-report.html
-    reportTitle: ZAP Scanning Report
+    reportFile: fullscan-zap.html
     template: traditional-html
-  type: report
-- parameters:
-    reportDescription: ''
+
+- type: report
+  parameters:
+    reportTitle: ZAP Full Scan Report
+    reportDescription: Active scan with OpenAPI coverage and authentication
     reportDir: /zap/wrk/
-    reportFile: zap-report.json
-    reportTitle: ZAP Scanning Report
+    reportFile: fullscan-zap.json
     template: traditional-json
-  type: report
